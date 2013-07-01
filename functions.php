@@ -34,7 +34,7 @@ function secure_password($password)
     {
         if(!is_numeric($password[$i]))
             $password[$i] = strtoupper($password[$i]);
-        break;
+        break; 
     }
     
     //replace up to 2 letters with numbers
@@ -49,7 +49,7 @@ function secure_password($password)
     $replace_count = 0;
     foreach($replacables as $key => $value)
     {
-        if($replace_count >= 2)
+        if($replace_count >= 1)
             break;
         if(strpos($password, $key) !== false)
         {
@@ -67,8 +67,8 @@ function secure_password($password)
             $numbers++;
     }
     
-    if($numbers == 0)
-        $password .= rand(0, 9);
+     //if($numbers == 0)
+    $password .= rand();
     
     //if password is less than 8 characters, append numbers 
     while(strlen($password) < 8)
@@ -96,22 +96,50 @@ function get_associations($keyword)
     if(empty($returned_data->RelatedTopics)) //Houston, we have a problem
     {
         $related = $keyword;
-        $url = 'http://duckduckgo.com/?q=' . urlencode($keyword);
-        return [$related, $url];
+//        $url = 'http://duckduckgo.com/?q=' . urlencode($keyword);
+        //return [$related, $url];
     }
     else
-    {
         $related = $returned_data->RelatedTopics[0]->Text;
-        $url = $returned_data->RelatedTopics[0]->FirstURL;
+//    $url = $returned_data->RelatedTopics[0]->FirstURL;
 
+//get the url from bing
+    if(strlen($related) > 20)
+        $cutoff = 20;
+    else
+        $cutoff = strlen($related);
+    $url = bing_first_url(substr($related, 0, $cutoff));
 
-
-        return [$related, $url];
-    }
+    return [$related, $url];    
 
 
     //return $returned_data;
 }
+
+/*
+ * Seaches up the query using bing and returns the first url. 
+ */
+function bing_first_url($query)
+{
+    $key = '6ZW7mTOX7dxFNjJT9jP7y2+oKv9lcc76Q3xr+DEireU=';
+    $query = "'" . urlencode($query) . "'";
+    $request = "https://api.datamarket.azure.com/Bing/Search/Web?\$format=json&Query=$query";
+    $auth = base64_encode("$key:$key");
+    $data = array(
+      'http'=>array(
+          'request_fulluri' => true,
+          'ignore_errors' => true,
+          'header' => "Authorization: Basic $auth"
+      )  
+    );
+    
+    $context = stream_context_create($data);
+    
+    $jsonObj = json_decode(file_get_contents($request, 0, $context));
+    $url = $jsonObj->d->results[0]->Url;
+    return $url;
+}
+
 
 /*
  * Gets two keywords from a url.
@@ -119,16 +147,17 @@ function get_associations($keyword)
  */
 function extract_keywords($url)
 {
-    $webpage = file_get_contents($url);
-    $text = strip_html_tags($webpage);
-    $text = html_entity_decode($text);
-    $text = strip_punctuation($text);
-    $text = strip_numbers($text);
-    $text = strip_symbols($text);
-    $text = strtolower($text);
+    $url = filter_var($url, FILTER_SANITIZE_URL);
+    $key = '60b94df7c23924d5ec6209e13e053640df2a1828';
+    $request = file_get_contents("http://access.alchemyapi.com/calls/url/URLGetRankedKeywords?apikey=$key&url=$url&maxRetrieve=2&keywordExtractMode=strict&outputMode=json");
     
-    $keywords = extractCommonWords($text);
-    return $keywords;
+    $jsonObj = json_decode($request);
+    //print_r($jsonObj->keywords[0]->text, $jsonObj->keywords[1]->text);
+    if(!empty($jsonObj->keywords[1]->text))
+        return [$jsonObj->keywords[0]->text, $jsonObj->keywords[1]->text];
+    else {
+        return ['undefined' , 'undefined'];
+    }
 }
 
 /**
@@ -312,8 +341,10 @@ function strip_numbers( $text )
 
 function extractCommonWords($string){
       $stopWords = array('i','a','about','an','and','are','as','at','be','by',
-          'com','de','domain','en', 'enter', 'feedback', 'for','from','help','how','in','is','it','la','more', 'most', 'of','on','or',
-          'search','that','the','this','to','was', 'within', 'what','when','where','who','will','with',
+          'com','de','domain','en', 'enter', 'feedback','first', 'for','from','help',
+          'how','in','is','it','la','more', 'most', 'of','on','or',
+          'prev','resultl','regionsite','search','that','the','this','to','was', 'within', 
+          'what','when','where','who','will','with',
           'und','the','www');
    
       $string = preg_replace('/\s\s+/i', '', $string); // replace whitespace

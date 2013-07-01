@@ -1,3 +1,4 @@
+
 <?php require_once 'header.php'; ?>
       <div class ="offset3 span6">
           <h1>Password Generator</h1>
@@ -23,15 +24,18 @@
               
               $info = get_associations($keyword);
               $description = $info[0];
-              print "<img src='http://mebe.co/" . urlencode($keyword) . "jpeg' class = 'img-rounded'/><br /><br />";
+              $words = extract_keywords($info[1]);
+              $r = rand(0,1);
+              print "<img src='http://mebe.co/" . urlencode($words[$r]) . "jpeg' class = 'img-rounded'/><br /><br />";
               print "<p>Generating password from keyword <strong>$keyword</strong>...</p>";
 
               print "<p>Hmm, <strong>$keyword</strong>? How about $description?</p>";
-              $words = array_keys(extract_keywords($info[1]));
+              
 //print_r($words);
               print "<p>This brings to mind <strong>$words[0]</strong> " . "and <strong>$words[1]</strong> </p>";
 
-              print "<p class = 'text-success'>Your password is: <code>" . secure_password($words[0] . $words[1]) . "</code></p>";
+              $words[$r] = str_replace(' ', '', $words[$r]);
+              print "<p class = 'text-success'>Your password is: <code>" . secure_password($words[$r]) . "</code></p>";
               print '<a class="btn btn-primary" href="index.php"><i class="icon-refresh icon-white"></i> Generate more</a>';
           } else {
               ?>
